@@ -1,0 +1,38 @@
+function [Population,FrontNo, Nondominated, CrowdDis, nd_pred, sr] = EnvironmentalSelection(Population,N, gen, genPred) 
+% The environmental selection of NSGA-II
+
+%------------------------------- Copyright --------------------------------
+% Copyright (c) 2023 BIMK Group. You are free to use the PlatEMO for
+% research purposes. All publications which use this platform or any code
+% in the platform should acknowledge the use of "PlatEMO" and reference "Ye
+% Tian, Ran Cheng, Xingyi Zhang, and Yaochu Jin, PlatEMO: A MATLAB platform
+% for evolutionary multi-objective optimization [educational forum], IEEE
+% Computational Intelligence Magazine, 2017, 12(4): 73-87".
+%--------------------------------------------------------------------------
+    
+    %% Non-dominated sorting
+    [FrontNo,MaxFNo] = NDSort(Population.objs,Population.cons,N);
+    nd_pred = 0;
+    if gen == genPred
+        indices = FrontNo == 1;
+        nd_pred = sum(indices(101:end));
+    end
+    Nondominated = Population(FrontNo == 1);
+    Next = FrontNo < MaxFNo;
+    
+    %% Calculate the crowding distance of each solution
+    CrowdDis = CrowdingDistance(Population.objs,FrontNo);
+    
+    %% Select the solutions in the last front based on their crowding distances
+    Last     = find(FrontNo==MaxFNo);
+    [~,Rank] = sort(CrowdDis(Last),'descend');
+    Next(Last(Rank(1:N-sum(Next)))) = true;
+    
+    % success rate
+    sr = sum(Next(N+1:end));
+
+    %% Population for next generation
+    Population = Population(Next);
+    FrontNo    = FrontNo(Next);
+    CrowdDis   = CrowdDis(Next);
+end
