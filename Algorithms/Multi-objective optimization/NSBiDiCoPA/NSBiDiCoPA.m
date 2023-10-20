@@ -104,23 +104,35 @@ classdef NSBiDiCoPA < ALGORITHM
 
                 
                 if pred && gen > (neighbors + window) && (gen - genPred) >= window 
+                    
+                    
                     AllPopulationHistory{gen} = [Population, ArcPop];
                     NondominatedHistory{gen} = NondominatedHistory{gen-1};
 
                     PredictedFront.gen    = gen;
                     PredictedFront.time_horizon = time_horizon;
                     
+                    metric  = {'euclidean', 'cityblock'};
+
+                    Data    = IdentifyClosestAllPop(AllPopulationHistory, ...
+                        NondominatedHistory, neighbors, gen, metric{1});
+
                     % prediction in the objective space
-                    [PredictedOS, SampledOS] = OSP(AllPopulationHistory, NondominatedHistory, ...
-                        time_horizon, neighbors, gen, Problem);
-				    PredictedFront.front  = PredictedOS;
+                    [PredictedOS, SampledOS] = OSP(Data, time_horizon, ...
+                        neighbors, gen, Problem);
+
+				    PredictedFront.front   = PredictedOS;
                     PredictedFront.sampled = SampledOS;
                     
                     % prediction in the decision space
-                    [PredictedDS, SampledDS] = DSP(AllPopulationHistory, NondominatedHistory, ...
-                        time_horizon, neighbors, gen, Problem, PredictedOS);
-                                        
+                    [PredictedDS, SampledDS] = DSP(Data, time_horizon, ...
+                        neighbors, gen, Problem, PredictedOS);
+                    
+                    % get solutions closest to the predicted objective
+                    % space
                     Solutions = ClosestSolutions(PredictedOS, SampledDS);
+
+
                     PredictedVariables.variables = PredictedDS;
                     PredictedVariables.sampled   = SampledDS;
                     PredictedVariables.solutions = Solutions;
@@ -137,7 +149,7 @@ classdef NSBiDiCoPA < ALGORITHM
                     fclose(fid);
                 
                 else
-                    Offspring  = OperatorDE(Problem, MatingPool(1:end), ...
+                    Offspring = OperatorDE(Problem, MatingPool(1:end), ...
                                     MatingPool(randi(Problem.N,1,Problem.N)), ...
                                     MatingPool(randi(Problem.N,1,Problem.N)), ...
                                     {Cr, F, proM, disM});
